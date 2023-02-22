@@ -1,0 +1,6 @@
+host: 127.0.0.1
+port: 7860
+
+is_push_to_public: false
+save-path: save/stack/outputs.jsonl
+page-size: 2

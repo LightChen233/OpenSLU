@@ -1,0 +1,97 @@
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
+    <style type="text/css">
+        span.rcorners2 {
+            background-color: #e6e6e6;
+            color: #000;
+        }
+
+        .btn-primary {
+            color: #fff;
+            background-color: #8f9eb4;
+            border-color: #8f9eb4;
+        }
+
+        .btn-primary:hover {
+            color: #fff;
+            background-color: #829ec5;
+            border-color: #829ec5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="row" style="width: 100%;margin: 0px;padding: 20px;">
+        <div class="col">
+            <div style="font-size: larger;margin-bottom: 10px;margin-top: 20px;"><b>Input Sample</b>
+                <hr />
+            </div>
+            <div class="row">
+                <textarea class="form-control" rows="5" id="comment" name="text"></textarea>
+            </div>
+            <div class="row">
+                <button onclick="post_data()" class="btn btn-primary" style="margin-top: 20px;">Submit</button>
+            </div>
+            <hr />
+        </div>
+        <div style="font-size: larger;margin-bottom: 10px;margin-top: 20px;"><b>Prediction Result</b>
+            <hr />
+        </div>
+        <div id="result"></div>
+    </div>
+
+</body>
+<script>
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl, {
+            "html": true,
+            "placement": "bottom"
+        })
+    });
+    function post_data() {
+        var inputDom = document.getElementById('comment');
+
+        $.ajax({
+            url: "/api/predict",
+            type: "post",
+            data: {
+                "text": inputDom.value
+            }, dataType: "json",
+            success: function (data) {
+                console.log(data)
+                var outputDom = document.getElementById('result');
+                html_data = `<b>Intent:</b>`
+                for (var i = 0; i < data["intent"].length; i++) {
+                    html_data += `<button type="button" class="btn btn-white">
+                                    <span class="badge text-dark btn-light">`+ data["intent"][i] + `</span>
+                                </button>`
+                }
+                html_data += `<br /> <b>Slot:</b>`
+                for (var i = 0; i < data["slot"].length; i++) {
+                    html_data += `<button type="button" class="btn btn-white">
+                                    `+ data["text"][i] + ` <span class="badge text-dark" style="background-color: rgb(255, 255, 255);
+                                        color: rgb(62 62 62);
+                                        box-shadow: 2px 2px 7px 1px rgba(210, 210, 210, 0.42);">` + data["slot"][i] + `</span>
+                                </button>`
+                }
+                html_data += `<hr /><br />`
+                outputDom.innerHTML = html_data
+            },
+            error: function () {
+            },
+            complete: function () {
+            }
+        });
+        return
+    }
+</script>
+
+</html>

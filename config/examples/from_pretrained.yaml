@@ -1,0 +1,53 @@
+device: "NVIDIA GeForce RTX 2080 Ti"
+
+base:
+  name: "OpenSLUv1"
+  train: false
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 300
+  batch_size: 16
+
+logger:
+  logger_type: wandb # wandb is supported both in single- multi-GPU, tensorboard is only supported in multi-GPU, and fitlog is only supported in single-GPU
+
+model_manager:
+  load_dir: null
+  save_dir: save/joint_bert
+  save_mode: save-by-eval # save-by-step
+  # save_step: 100
+  max_save_num: 1
+
+accelerator:
+  use_accelerator: false
+
+dataset:
+  dataset_name: atis
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  # eval_step: 1800
+  metric:
+    - intent_acc
+    - slot_f1
+    - EMA
+
+tokenizer:
+  _from_pretrained_: "'LightChen2333/joint-bert-slu-' + '{dataset.dataset_name}'"
+
+optimizer:
+  _model_target_: torch.optim.Adam
+  _model_partial_: true
+  lr: 0.001
+  weight_decay: 1e-6
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _from_pretrained_: "'LightChen2333/joint-bert-slu-' + '{dataset.dataset_name}'"

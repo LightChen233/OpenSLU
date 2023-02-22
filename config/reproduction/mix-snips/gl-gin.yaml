@@ -1,0 +1,131 @@
+device: "NVIDIA GeForce RTX 2080 Ti"
+
+base:
+  name: "OpenSLUv1"
+  multi_intent: true
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 50
+  batch_size: 32
+  ignore_index: -100
+  
+
+model_manager:
+  load_dir: null
+  save_dir: save/gl-gin-mix-snips
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: false
+  eval_step: 1800
+  metric:
+    - intent_acc
+    - intent_f1
+    - slot_f1
+    - EMA
+
+dataset:
+  dataset_name: mix-snips
+
+tokenizer:
+    _tokenizer_name_: word_tokenizer
+    _padding_side_: right
+    _align_mode_: fast
+    add_special_tokens: false
+    max_length: 512
+
+optimizer:
+  _model_target_: torch.optim.Adam
+  _model_partial_: true
+  lr: 0.001
+  weight_decay: 1e-6
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: self-attention-lstm
+
+    embedding:
+      embedding_dim: 128
+      dropout_rate: 0.4
+
+    lstm:
+      layer_num: 2
+      bidirectional: true
+      output_dim: 256
+      dropout_rate: 0.4
+
+    attention:
+      hidden_dim: 1024
+      output_dim: 128
+      dropout_rate: 0.4
+    output_dim: "{model.encoder.lstm.output_dim} + {model.encoder.attention.output_dim}"
+    return_with_input: true
+    return_sentence_level_hidden: false
+
+  decoder:
+    _model_target_: model.decoder.GLGINDecoder
+    dropout_rate: 0.4
+    interaction:
+      _model_target_: model.decoder.interaction.GLGINInteraction
+      intent_embedding_dim: 256
+      input_dim: "{model.encoder.output_dim}"
+      hidden_dim: 256
+      output_dim: "{model.decoder.interaction.intent_embedding_dim}"
+      dropout_rate: 0.4
+      alpha: 0.2
+      num_heads: 4
+      num_layers: 2
+      row_normalized: true
+      slot_graph_window: 1
+      intent_label_num: "{base.intent_label_num}"
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.MLPClassifier
+      mode: "token-level-intent"
+      mlp:
+        - _model_target_: torch.nn.Linear
+          in_features: "{model.encoder.output_dim}"
+          out_features: 256
+        - _model_target_: torch.nn.LeakyReLU
+          negative_slope: 0.2
+        - _model_target_: torch.nn.Linear
+          in_features: 256
+          out_features: "{base.intent_label_num}"
+      loss_fn:
+        _model_target_: torch.nn.BCEWithLogitsLoss
+      dropout_rate: 0.4
+      use_multi: "{base.multi_intent}"
+      multi_threshold: 0.5
+      return_sentence_level: true
+      ignore_index: "{base.ignore_index}"
+      weight: 0.2
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.MLPClassifier
+      mode: "slot"
+      mlp:
+        - _model_target_: torch.nn.Linear
+          in_features: "{model.decoder.interaction.output_dim}"
+          out_features: "{model.decoder.interaction.output_dim}"
+        - _model_target_: torch.nn.LeakyReLU
+          negative_slope: 0.2
+        - _model_target_: torch.nn.Linear
+          in_features: "{model.decoder.interaction.output_dim}"
+          out_features: "{base.slot_label_num}"
+      ignore_index: "{base.ignore_index}"
+      dropout_rate: 0.4
+      use_multi: false
+      multi_threshold: 0.5
+      weight: 0.8
+      return_sentence_level: false

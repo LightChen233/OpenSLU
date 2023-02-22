@@ -1,0 +1,106 @@
+device: "NVIDIA GeForce RTX 2080 Ti"
+
+base:
+  name: "OpenSLUv1"
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 300
+  batch_size: 16
+
+model_manager:
+  load_dir: null
+  save_dir: save/bi-model-atis
+
+accelerator:
+  use_accelerator: false
+
+dataset:
+  dataset_name: atis
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  # eval_step: 1800
+  metric:
+    - intent_acc
+    - slot_f1
+    - EMA
+
+
+tokenizer:
+  _tokenizer_name_: word_tokenizer
+  _padding_side_: right
+  _align_mode_: fast
+  add_special_tokens: false
+  max_length: 512
+
+optimizer:
+  _model_target_: torch.optim.Adam
+  _model_partial_: true
+  lr: 0.001
+  weight_decay: 1e-6
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.BiEncoder
+    intent_encoder:
+      _model_target_: model.encoder.AutoEncoder
+      encoder_name: lstm
+
+      embedding:
+        embedding_dim: 256
+        dropout_rate: 0.4
+
+      lstm:
+        dropout_rate: 0.5
+        output_dim: 256
+        layer_num: 2
+        bidirectional: true
+
+      return_with_input: true
+      return_sentence_level_hidden: false
+
+    slot_encoder:
+      _model_target_: model.encoder.AutoEncoder
+      encoder_name: lstm
+
+      embedding:
+        embedding_dim: 256
+        dropout_rate: 0.4
+
+      lstm:
+        dropout_rate: 0.5
+        output_dim: 256
+        layer_num: 2
+        bidirectional: true
+
+      return_with_input: true
+      return_sentence_level_hidden: false
+
+  decoder:
+    _model_target_: model.decoder.BaseDecoder
+#    teacher_forcing: true
+    interaction:
+      _model_target_: model.decoder.interaction.BiModelInteraction
+      output_dim: 256
+      dropout_rate: 0.4
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "intent"
+      ignore_index: -100
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "slot"
+      ignore_index: -100

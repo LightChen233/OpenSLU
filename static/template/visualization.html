@@ -1,0 +1,453 @@
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>OpenSLU Visual Analysis</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
+    <style type="text/css">
+        span.rcorners2 {
+            background-color: #e6e6e6;
+            color: #000;
+        }
+    </style>
+    <link rel="icon" href="{{url_for('static',filename='favicon.ico')}}" type ="image/x-icon">
+</head>
+
+<body>
+    <div class="row" style="width: 100%;margin: 2px;">
+        <div class="col-md-12 col-sm-12" style="display: flex; flex-direction: column; align-items: center;">
+
+            <div class="row" style="width: 100%; margin: 20px 0px 30px 0px; justify-content: center;">
+                <div class="col-md-4">
+                    <div class="card"
+                        style="width: 100%;display: flex;align-content: center;flex-direction: column;flex-wrap: nowrap;justify-content: center;align-items: center;">
+                        <div style="margin-bottom: 0px; margin-top: 20px;text-align: center;">
+                            <b>Error Intent Label Distribution</b>
+                        </div>
+                        <div id="intent-pie" style="width: 100%;height:300px;"></div>
+                    </div>
+
+                </div>
+                <div class="col-md-4">
+                    <div class="card"
+                        style="width: 100%;display: flex;align-content: center;flex-direction: column;flex-wrap: nowrap;justify-content: center;align-items: center;">
+                        <div style="margin-bottom: 0px; margin-top: 20px;text-align: center;">
+                            <b>Error Slot Label Distribution</b>
+                        </div>
+                        <div id="slot-pie" style="width: 100%;height:300px;"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card"
+                        style="width: 90%;display: flex;align-content: center;flex-direction: column;flex-wrap: nowrap;justify-content: center;align-items: center;">
+                        <div class="card-body" style="width: 100%;">
+                            <div id="card-title" style="text-align: center;"></div>
+                            <div id="gauge_chart" style="width: 100%; height:200px;"></div>
+                            <p class="card-text" style="margin-top: -80px;" id="card-statistics">
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="width: 100%; margin: 20px 0px 30px 0px; justify-content: center;">
+
+
+
+                <script type="text/javascript">
+                    {% autoescape false %}
+                    var slot_dict = {{ slot_dict }}
+                    var slot_dict_list = {{ slot_dict_list }}
+                    var intent_dict = {{ intent_dict }}
+                    var intent_dict_list = {{ intent_dict_list }}
+
+                    {% endautoescape %}
+                    function drawPieChart(docId, data, type) {
+                        var chartDom = document.getElementById(docId);
+                        var data_keys = []
+                        for (var i = 0; i < data.length; i++) {
+                            data_keys.push(data[i]["name"])
+                        }
+                        var myChart = echarts.init(chartDom);
+
+                        var option = {
+                            tooltip: {
+                                trigger: 'item'
+                            },
+                            visualMap: {
+                                show: false,
+                                // min: 0,
+                                // max: {{max_slot}},
+                                splitNumber: 10,
+                                inRange: {
+                                    color: ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee090", "#ffffbf", "#e0f3f8", "#abd9e9", "#74add1", "#4575b4", "#313695"]
+                                    // colorLightness: [0, 1]
+                                },
+                                pieces: [
+                                    { gt: data[1]["value"], lte: data[0]["value"] },
+                                    { gt: data[2]["value"], lte: data[1]["value"] },
+                                    { gt: data[3]["value"], lte: data[2]["value"] },
+                                    { gt: data[4]["value"], lte: data[3]["value"] },
+                                    { gt: data[5]["value"], lte: data[4]["value"] },
+                                    { gt: data[6]["value"], lte: data[5]["value"] },
+                                    { gt: data[7]["value"], lte: data[6]["value"] },
+                                    { gt: data[8]["value"], lte: data[7]["value"] },
+                                    { gt: data[9]["value"], lte: data[8]["value"] },
+                                    { lte: data[9]["value"] }                 // (-Infinity, 5)
+                                ]
+                            },
+                            series: [
+                                {
+                                    type: 'pie',
+                                    radius: ['50%', '70%'],
+                                    avoidLabelOverlap: false,
+                                    itemStyle: {
+                                        // color: 'rgb(56,116,255)',
+                                        borderRadius: 10,
+                                        borderColor: '#fff',
+                                        borderWidth: 2
+                                    },
+                                    label: {
+                                        show: false,
+                                        position: 'center'
+                                    },
+                                    emphasis: {
+                                        label: {
+                                            show: true,
+                                            fontSize: 20,
+                                            fontWeight: 'bold'
+                                        }
+                                    },
+                                    labelLine: {
+                                        show: false
+                                    },
+                                    data: data
+                                }
+                            ]
+                        };
+
+                        option && myChart.setOption(option);
+                        myChart.on('click', function (params) {
+                            if (type == "slot") {
+                                var detailChart = drawGaugeChart("gauge_chart", slot_dict, params.name, "slot")
+                            } else {
+                                var detailChart = drawGaugeChart("gauge_chart", intent_dict, params.name, "intent")
+                            }
+
+                        });
+                    }
+                    function drawBarChart(docId, data, type) {
+                        var chartDom = document.getElementById(docId);
+                        var data_dicts = {}
+                        var data_keys = []
+                        var bars = []
+                        for (var i = 0; i < data.length; i++) {
+                            data_dicts[data[i]["name"]] = data[i]["value"]
+                            data_keys.push(data[i]["name"])
+                            bars.push({ type: 'bar' })
+                        }
+                        var myChart = echarts.init(chartDom);
+
+                        option = {
+                            legend: {},
+                            tooltip: {},
+                            dataset: {
+                                dimensions: data_keys,
+                                source: [data_dicts]
+                            },
+                            xAxis: { type: 'category' },
+                            yAxis: {},
+                            // Declare several bar series, each will be mapped
+                            // to a column of dataset.source by default.
+                            series: bars
+                        };
+                        option && myChart.setOption(option);
+                        myChart.on('click', function (params) {
+                            if (type == "slot") {
+                                var detailChart = drawGaugeChart("gauge_chart", slot_dict, params.name, "slot")
+                            } else {
+                                var detailChart = drawGaugeChart("gauge_chart", intent_dict, params.name, "intent")
+                            }
+
+                        });
+                    }
+                    function greatBarChart(docId, data, type) {
+                        var chartDom = document.getElementById(docId);
+                        var myChart = echarts.init(chartDom);
+                        myChart.hideLoading();
+                        var data_lists = []
+                        var data_keys = []
+                        var bars = []
+                        var colors = [
+                            '#dd6b66',
+                            '#759aa0',
+                            '#e69d87',
+                            '#8dc1a9',
+                            '#ea7e53',
+                            '#eedd78',
+                            '#73a373',
+                            '#73b9bc',
+                            '#7289ab',
+                            '#91ca8c',
+                            '#f49f42'
+                        ]
+                        for (var i = 0; i < data.length; i++) {
+                            data_lists.push({ "value": data[i]["value"], "itemStyle": { color: colors[i % colors.length] } })
+                            data_keys.push(data[i]["name"])
+                            bars.push({ type: 'bar' })
+                        }
+                        console.log(data_lists)
+                        option = {
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow',
+                                    label: {
+                                        show: true
+                                    }
+                                }
+                            },
+                            toolbox: {
+                                show: true,
+                                feature: {
+                                    dataZoom: { yAxisIndex: 'none', title: 'Area Zoom' },
+                                    // mark: { show: true, title: "" },
+                                    dataView: { show: true, readOnly: false, title: 'Raw Data' },
+                                    magicType: { show: true, type: ['line', 'bar'], title: { line: 'Switch to Line Chart', bar: 'Switch to Bar Chart' } },
+                                    restore: { show: true, title: 'Restore Image' },
+                                    saveAsImage: { show: true, title: 'Save as Image' }
+                                }
+                            },
+                            calculable: true,
+                            legend: {
+                                data: ['Budget 2011'],
+                                itemGap: 5
+                            },
+                            grid: {
+                                top: 50,
+                                bottom: 50,
+                                left: 10,
+                                right: 30,
+                                containLabel: true
+                            },
+                            xAxis: { type: 'category', data: data_keys, show: false },
+                            yAxis: {},
+                            dataZoom: [
+                                {
+                                    show: true,
+                                    start: 0,
+                                    end: 100
+                                },
+                                {
+                                    type: 'inside',
+                                    start: 0,
+                                    end: 100
+                                },
+                                {
+                                    show: true,
+                                    yAxisIndex: 0,
+                                    filterMode: 'empty',
+                                    width: 20,
+                                    // top: '10%',
+                                    height: '60%',
+                                    showDataShadow: false,
+                                    // left: '93%'
+                                }
+                            ],
+                            series: [{ data: data_lists, type: 'bar' }]
+                        };
+                        option && myChart.setOption(option);
+                        myChart.on('click', function (params) {
+                            if (type == "slot") {
+                                var detailChart = drawGaugeChart("gauge_chart", slot_dict, params.name, "slot")
+                            } else {
+                                var detailChart = drawGaugeChart("gauge_chart", intent_dict, params.name, "intent")
+                            }
+
+                        });
+                    }
+                    var xchart = greatBarChart("intent-pie", intent_dict_list, "intent")
+                    var ychart = greatBarChart("slot-pie", slot_dict_list, "slot")
+                    function drawGaugeChart(docId, x_dict, x_name, type) {
+                        var chartDom = document.getElementById(docId);
+                        var data = x_dict[x_name]
+                        var total = data[0][1]
+                        var error = data[1][1]
+                        var option = {
+                            series: [{
+                                type: 'gauge',
+                                startAngle: 170,
+                                endAngle: 10,
+                                min: 0,
+                                max: 100,
+                                pointer: { show: false },
+                                splitLine: {
+                                    show: false,
+                                    distance: 0,
+                                    length: 10
+                                },
+                                axisTick: { show: false },
+                                axisLabel: {
+                                    show: false,
+                                    distance: 50
+                                },
+                                detail: {
+                                    show: false,
+                                    width: 50,
+                                    height: 14,
+                                    fontSize: 14,
+                                    color: 'inherit',
+                                    borderColor: 'inherit',
+                                    borderRadius: 20,
+                                    borderWidth: 1,
+                                    formatter: '{value}%'
+                                },
+                                itemStyle: {
+                                    color: 'rgb(128,183,214)',
+                                    // color: 'rgb(56,116,255)',
+                                    // shadowColor: 'rgba(56,116,255,0.75)',
+                                    // shadowBlur: 10,
+                                    // shadowOffsetX: 2,
+                                    // shadowOffsetY: 2
+                                },
+                                progress: {
+                                    show: true,
+                                    roundCap: true,
+                                    width: 18
+                                },
+                                axisLine: {
+                                    roundCap: true,
+                                    lineStyle: { width: 18 }
+                                },
+                                data: [100.0 * error / total]
+                            }]
+                        };
+                        var myChart = echarts.init(chartDom);
+                        option && myChart.setOption(option);
+                        var element = document.getElementById("card-statistics");
+                        var html_txt = ``
+                        html_txt += '<div style="margin: 0px 10px 10px 10px;"><b>' + Math.round(100.0 * error / total * 10) / 10 + '%</b> of <b>' + x_name + '</b> labels are predicted incorrectly.  They are predicted as: </div>';
+                        for (var i = 2; i < data.length; i++) {
+                            ratio = Math.round(100.0 * data[i][1] / error * 10) / 10
+                            html_txt += `<div style="margin: 0px 10px 0px 10px;">
+                        <div style="width:15%; height:12px; background-color:rgb(234, 235, 235);border-radius: 6px; display: inline-block;">
+                            <div style="width:`
+                                + (ratio) + `%; height:12px; background-color:rgb(128,183,214);border-radius: 6px; display: inline-block;"></div>
+                        </div>
+                        <div style="width: 63%;margin-left: 12px;display: inline-block;">`
+                                + data[i][0] +
+                                `</div>
+                            <div style="width:15%; display: inline-block;text-align: right;">`
+                                + ratio +
+                                `%</div></div>`;
+                        }
+                        element.innerHTML = html_txt;
+                        var title = document.getElementById("card-title");
+                        title.innerHTML = "<b>Error ratio for " + type + " '" + x_name + "'</b>"
+                    }
+                    var detailChart = drawGaugeChart("gauge_chart", slot_dict, slot_dict_list[0].name, "slot")
+                </script>
+            </div>
+        </div>
+        <div class="col-md-12 col-sm-12" style="margin: -30px 10px 10px 10px; padding: 0px 40px 0px 40px;">
+            <div style="font-size: larger;margin-bottom: 10px;"><b>Instance Analysis</b>
+                <hr />
+            </div>
+            {% for example in examples %}
+            <b>Intent:</b>
+            {% for e in example["intent"] %}
+            {% if e["intent"] == e["pred_intent"] %}
+
+            <button type="button" class="btn btn-white">
+                <span class="badge text-dark btn-light">{{e["pred_intent"]}}</span>
+            </button>
+            {% else %}
+            <button type="button" class="btn btn-light" data-bs-trigger="hover" data-bs-toggle="popover"
+                data-bs-placement="left" data-bs-content="
+                <b>Golden Intent: </b>
+                <span class='badge text-dark btn-light' style='background-color: #e6e6e6;'>
+                    {{e['intent']}}
+                </span>">
+                <span class="badge"
+                    style="background-color: rgb(246,123,74);color: rgb(255, 255, 255);">{{e["pred_intent"]}}</span>
+            </button>
+            {% endif %}
+            {% endfor %}
+
+            <br />
+            <b>Slot:</b>
+            {% for e in example["slot"] %}
+            {% if e["slot"] == e["pred_slot"] %}
+
+            <button type="button" class="btn btn-white">
+                {{e["text"]}} <span class="badge text-dark" style="background-color: rgb(255, 255, 255);
+                color: rgb(62 62 62);
+                box-shadow: 2px 2px 7px 1px rgba(210, 210, 210, 0.42);">{{e["pred_slot"]}}</span>
+            </button>
+            {% else %}
+            <button type="button" class="btn btn-light" data-bs-trigger="hover" data-bs-toggle="popover"
+                data-bs-placement="left" data-bs-content="
+                <b>Golden Slot: </b>
+                <span class='rcorners2 badge text-dark btn-light'>
+                    {{e['slot']}}
+                </span>">
+                {{e["text"]}} <span class="badge" style="background-color: rgb(246,123,74);
+                color: rgb(255, 255, 255);
+                ">{{e["pred_slot"]}}</span>
+            </button>
+            {% endif %}
+            {% endfor %}
+            <hr /><br />
+            {% endfor %}
+            <div class="row">
+                <div class="col"><button type="button" class="btn btn-outline-light text-dark"
+                        style="box-shadow: 2px 2px 7px 1px rgba(210, 210, 210, 0.42);" onclick="jump('/?page={{page - 1}}')">← Last
+                        Page</button></div>
+                <div class="col" style="justify-content: center;display: flex;align-content: center;align-items: center;">
+                    <div class="row" style="width: 230px;">
+                        <div class="col" style="display: flex; align-items: center;">Page Index:</div>
+                        <div class="col">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="inputs" value="{{page}}">
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+                <script>
+                    var inputDom = document.getElementById('inputs');
+                    inputDom.onblur = function () {
+                        var n = Number(inputDom.value);
+                        if (!isNaN(n)){
+                            window.location.href = '/?page=' + inputDom.value;
+                        }
+                            
+                    };
+                    function jump(url){ window.location.href=url;}
+                </script>
+                <div class="col" style="display: flex; justify-content: flex-end; padding-right: 40px;"><button
+                        type="button" class="btn btn-outline-light text-dark"
+                        style="box-shadow: 2px 2px 7px 1px rgba(210, 210, 210, 0.42);" onclick="jump('/?page={{page + 1}}')">Next
+                        Page →</button></div>
+            </div>
+
+
+        </div>
+    </div>
+
+</body>
+<script>
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl, {
+            "html": true,
+            "placement": "bottom"
+        })
+    });
+</script>
+
+</html>

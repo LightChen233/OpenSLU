@@ -1,0 +1,14 @@
+torch
+transformers==4.25.1
+ruamel-yaml==0.17.21
+accelerate==0.13.2
+dill==0.3.6
+einops==0.6.0
+wandb==0.13.8
+scikit-learn==1.2.0
+pytorch-crf==0.7.2
+ordered-set==4.1.0
+gradio==3.16.2
+flask==2.2.2
+datasets==2.8.0
+colorlog==6.7.0

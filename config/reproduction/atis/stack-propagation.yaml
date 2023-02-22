@@ -1,0 +1,109 @@
+device: "NVIDIA GeForce RTX 2080 Ti"
+
+base:
+  name: "OpenSLUv1"
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 300
+  batch_size: 16
+
+model_manager:
+  load_dir: null
+  save_dir: save/stack-propagation-atis
+  save_mode: save-by-eval # save-by-step
+  # save_step: 100
+  max_save_num: 1
+
+accelerator:
+  use_accelerator: false
+
+dataset:
+  dataset_name: atis
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  # eval_step: 1800
+  metric:
+    - intent_acc
+    - slot_f1
+    - EMA
+
+tokenizer:
+  _tokenizer_name_: word_tokenizer
+  _padding_side_: right
+  _align_mode_: fast
+  _to_lower_case_: true
+  add_special_tokens: false
+  max_length: 512
+
+optimizer:
+  _model_target_: torch.optim.Adam
+  _model_partial_: true
+  lr: 0.001
+  weight_decay: 1e-6
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: self-attention-lstm
+
+    embedding:
+      embedding_dim: 256
+      dropout_rate: 0.55
+
+    lstm:
+      layer_num: 1
+      bidirectional: true
+      output_dim: 256
+      dropout_rate: 0.5
+
+    attention:
+      hidden_dim: 1024
+      output_dim: 128
+      dropout_rate: 0.6
+
+    return_with_input: true
+    return_sentence_level_hidden: false
+
+  decoder:
+    _model_target_: model.decoder.StackPropagationDecoder
+    interaction:
+      _model_target_: model.decoder.interaction.StackInteraction
+      differentiable: false
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.AutoregressiveLSTMClassifier
+      layer_num: 1
+      bidirectional: false
+      force_ratio: 0.9
+      hidden_dim: 64
+      embedding_dim: 8
+      ignore_index: -100
+      dropout_rate: 0.5
+      mode: "token-level-intent"
+      use_multi: false
+      return_sentence_level: true
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.AutoregressiveLSTMClassifier
+      layer_num: 1
+      bidirectional: false
+      force_ratio: 0.9
+      hidden_dim: 64
+      embedding_dim: 32
+      ignore_index: -100
+      dropout_rate: 0.55
+      mode: "slot"
+      use_multi: false
+      return_sentence_level: false

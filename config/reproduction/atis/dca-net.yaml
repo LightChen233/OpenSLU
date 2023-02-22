@@ -1,0 +1,88 @@
+device: "Tesla P100-PCIE-16GB"
+
+base:
+  name: "OpenSLUv1"
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 300
+  batch_size: 16
+
+model_manager:
+  load_dir: null
+  save_dir: save/dca-net-atis
+
+accelerator:
+  use_accelerator: false
+
+dataset:
+  dataset_name: atis
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  # eval_step: 1800
+  metric:
+    - intent_acc
+    - slot_f1
+    - EMA
+
+tokenizer:
+    _tokenizer_name_: word_tokenizer
+    _padding_side_: right
+    _align_mode_: fast
+    add_special_tokens: false
+    max_length: 512
+
+optimizer:
+  _model_target_: torch.optim.Adam
+  _model_partial_: true
+  lr: 0.001
+  weight_decay: 1e-6
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: lstm
+
+    embedding:
+      load_embedding_name: glove.6B.300d.txt
+      embedding_dim: 300
+      dropout_rate: 0.5
+
+    lstm:
+      dropout_rate: 0.5
+      output_dim: 128
+      layer_num: 2
+      bidirectional: true
+    output_dim: "{model.encoder.lstm.output_dim}"
+    return_with_input: true
+    return_sentence_level_hidden: false
+
+  decoder:
+    _model_target_: model.decoder.DCANetDecoder
+    interaction:
+      _model_target_: model.decoder.interaction.DCANetInteraction
+      output_dim: "{model.encoder.output_dim}"
+      attention_dropout: 0.5
+      num_attention_heads: 8
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "intent"
+      input_dim: "{model.encoder.output_dim}"
+      ignore_index: -100
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "slot"
+      input_dim: "{model.encoder.output_dim}"
+      ignore_index: -100
