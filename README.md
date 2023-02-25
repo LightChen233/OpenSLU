@@ -40,7 +40,7 @@ In this work, we introduce __OpenSLU__, an open-source toolkit to provide a uniï
 OpenSLU requires `Python>=3.8`, and `torch>=1.12.0`.
 ### Install from git
 ```bash 
-git clone https://github.com/LightChen2333/OpenSLU.git && cd OpenSLU/
+git clone https://github.com/LightChen233/OpenSLU.git && cd OpenSLU/
 pip install -r requirements.txt
 ```
 
