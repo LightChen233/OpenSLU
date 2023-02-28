@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-19 15:39:48
+LastEditTime: 2023-02-28 20:54:40
 Description: all class for load data.
 
 '''
@@ -49,9 +49,12 @@ class DataFactory(object):
             with open(data_file, encoding="utf-8") as f:
                 for line in f:
                     row = json.loads(line)
-                    data_dict["text"].append(row["text"])
-                    data_dict["slot"].append(row["slot"])
-                    data_dict["intent"].append(row["intent"])
+                    if len(row["text"]) == len(row["slot"]):
+                        data_dict["text"].append(row["text"])
+                        data_dict["slot"].append(row["slot"])
+                        data_dict["intent"].append(row["intent"])
+                    else:
+                        print("Error Input: ", row)
             return Dataset.from_dict(data_dict)
 
     def update_label_names(self, dataset):
@@ -200,7 +203,10 @@ class DataFactory(object):
                                              [0]:offset[temp_jdx][1]].strip()
 
                     if temp_jdx == jdx:
-                        raise ValueError("Illegal Input data")
+                        if temp_jdx == len(offset) - 1:
+                            break
+                        else:
+                            raise ValueError("Illegal Input data")
                     elif last_str == split_text:
                         tokens = [jdx, temp_jdx]
                         jdx = temp_jdx
@@ -242,8 +248,7 @@ class DataFactory(object):
                     # if len(offsets) != len(batch[i]["text"]) or len(offsets) != len(batch[i]["slot"]):
                     #     if
                     for off in offsets:
-                        slot_mask[i][off[0]
-                                     ] = self.slot_label_dict[batch[i]["slot"][num]]
+                        slot_mask[i][off[0]] = self.slot_label_dict[batch[i]["slot"][num]]
                         num += 1
                 # slot = slot_mask.clone()
                 # attentin_id = 0 if self.tokenizer.padding_side == "right" else 1
