@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-28 19:28:46
+LastEditTime: 2023-02-28 20:58:08
 Description: manage all process of model training and prediction.
 
 '''
@@ -251,8 +251,6 @@ class ModelManager(object):
         self.optimizer.zero_grad()
         for _ in range(int(self.config.base.get("epoch_num"))):
             for data in self.train_dataloader:
-                progress_bar.update(1)
-                continue
                 if step == 0:
                     self.logger.info(data.get_item(
                         0, tokenizer=self.tokenizer, intent_map=self.intent_list, slot_map=self.slot_list))
