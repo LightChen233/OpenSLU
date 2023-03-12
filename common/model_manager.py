@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-28 20:58:08
+LastEditTime: 2023-03-07 23:49:19
 Description: manage all process of model training and prediction.
 
 '''
@@ -55,7 +55,7 @@ class ModelManager(object):
         else:
             self.accelerator = None
         self.tokenizer = None
-        self.saver = Saver(self.config.model_manager, start_time=self.config.start_time)
+        self.saver = Saver(self.config.model_manager, start_time=self.config.start_time, accelerator=self.accelerator)
         if self.config.base.get("train"):
             self.model = None
             self.optimizer = None
@@ -143,17 +143,18 @@ class ModelManager(object):
                                                        label2tensor=True,
                                                        **tokenizer_config)
             self.total_step = int(self.config.base.get("epoch_num")) * len(self.train_dataloader)
-            dev_dataset = self.data_factory.load_dataset(self.config.dataset, split="validation")
-            self.dev_dataloader = self.data_factory.get_data_loader(dev_dataset,
-                                                     batch_size,
-                                                     shuffle=False,
-                                                     device=self.device,
-                                                     enable_label=True,
-                                                     align_mode=self.config.tokenizer.get(
-                                                         "_align_mode_"),
-                                                     label2tensor=False,
-                                                     **tokenizer_config)
-            self.data_factory.update_vocabulary(dev_dataset)
+            if self.saver.use_validation():
+                dev_dataset = self.data_factory.load_dataset(self.config.dataset, split="validation")
+                self.dev_dataloader = self.data_factory.get_data_loader(dev_dataset,
+                                                        batch_size,
+                                                        shuffle=False,
+                                                        device=self.device,
+                                                        enable_label=True,
+                                                        align_mode=self.config.tokenizer.get(
+                                                            "_align_mode_"),
+                                                        label2tensor=False,
+                                                        **tokenizer_config)
+                self.data_factory.update_vocabulary(dev_dataset)
             self.intent_list = None
             self.intent_dict = None
             self.slot_list = None
@@ -250,6 +251,7 @@ class ModelManager(object):
         progress_bar.update(self.init_step)
         self.optimizer.zero_grad()
         for _ in range(int(self.config.base.get("epoch_num"))):
+            
             for data in self.train_dataloader:
                 if step == 0:
                     self.logger.info(data.get_item(
@@ -278,12 +280,13 @@ class ModelManager(object):
                     "optimizer": self.optimizer.state_dict(),
                     "lr_scheduler": self.lr_scheduler.state_dict()
                 }
-                if not self.saver.auto_save_step(self.model, train_state, self.accelerator):
+                self.saver.auto_save_step(self.model, train_state, self.accelerator)
+                if self.saver.use_validation():
                     if not self.config.evaluator.get("eval_by_epoch") and step % self.config.evaluator.get("eval_step") == 0 and step != 0:
                         self.best_metric = self.eval(step, self.best_metric)
                 step += 1
                 progress_bar.update(1)
-            if self.config.evaluator.get("eval_by_epoch"):
+            if self.saver.use_validation() and self.config.evaluator.get("eval_by_epoch"):
                 self.best_metric = self.eval(step, self.best_metric)
         self.logger.finish()
         return self.best_metric
@@ -310,32 +313,34 @@ class ModelManager(object):
         return
 
     def __evaluate(self, model, dataloader, mode="dev"):
-        model.eval()
-        inps = InputData()
-        outputs = OutputData()
-        for data in dataloader:
-            torch.cuda.empty_cache()
-            output = model(data)
-            if self.accelerator is not None and hasattr(self.model, "module"):
-                decode_output = model.module.decode(output, data)
+        with torch.no_grad():
+            model.eval()
+            inps = InputData()
+            outputs = OutputData()
+            for data in dataloader:
+                torch.cuda.empty_cache()
+                if self.accelerator is not None and hasattr(self.model, "module"):
+                    output = model.module(data)
+                    decode_output = model.module.decode(output, data)
+                else:
+                    output = model(data)
+                    decode_output = model.decode(output, data)
+
+                decode_output.map_output(slot_map=self.slot_list,
+                                        intent_map=self.intent_list)
+                if self.config.model["decoder"].get("slot_classifier"):
+                    data, decode_output = utils.remove_slot_ignore_index(
+                        data, decode_output, ignore_index="#")
+
+                inps.merge_input_data(data)
+                outputs.merge_output_data(decode_output)
+            if "metric" in self.config.evaluator:
+                res = Evaluator.compute_all_metric(
+                    inps, outputs, intent_label_map=self.intent_dict, metric_list=self.config.evaluator["metric"])
             else:
-                decode_output = model.decode(output, data)
-
-            decode_output.map_output(slot_map=self.slot_list,
-                                     intent_map=self.intent_list)
-            if self.config.model["decoder"].get("slot_classifier"):
-                data, decode_output = utils.remove_slot_ignore_index(
-                    data, decode_output, ignore_index="#")
-
-            inps.merge_input_data(data)
-            outputs.merge_output_data(decode_output)
-        if "metric" in self.config.evaluator:
-            res = Evaluator.compute_all_metric(
-                inps, outputs, intent_label_map=self.intent_dict, metric_list=self.config.evaluator["metric"])
-        else:
-            res = Evaluator.compute_all_metric(
-                inps, outputs, intent_label_map=self.intent_dict)
-        self.logger.info(f"Best {mode} metric: "+str(res))
+                res = Evaluator.compute_all_metric(
+                    inps, outputs, intent_label_map=self.intent_dict)
+            self.logger.info(f"Best {mode} metric: "+str(res))
         model.train()
         return outputs, res
 
