@@ -32,6 +32,8 @@ Spoken Language Understanding (SLU) is one of the core components of a task-orie
 
 In this work, we introduce __OpenSLU__, an open-source toolkit to provide a uniﬁed, modularized, and extensible toolkit for spoken language understanding. Speciﬁcally, OpenSLU uniﬁes 10 SLU baselines for both single-intent and multi-intent scenarios, which support both non-pretrained and pretrained models simultaneously. Additionally, OpenSLU is highly modularized and extensible by decomposing the model architecture, inference, and learning process into reusable modules, which allows researchers to quickly set up SLU experiments with highly ﬂexible conﬁgurations. We hope OpenSLU can help researcher to quickly initiate experiments and spur more breakthroughs in SLU.
 
+## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/notes.png" width="25" /> Reference
+
 If you find this project useful for your research, please consider citing the following paper:
 
 ```
@@ -45,11 +47,7 @@ If you find this project useful for your research, please consider citing the fo
 }
 ```
 
-## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/notes.png" width="25" /> Changelog
-- 2023-05-17
-    - Our work are submitted by `ACL2023 Demo`.
-- 2023-02-22
-    - We build the first version and release it.
+
 
 ## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/resource.png" width="25" /> Installation
 ### System requirements
