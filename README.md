@@ -6,9 +6,6 @@
   	<a >
       <img alt="version" src="https://img.shields.io/badge/version-v0.1.0-blue?color=FF8000?color=009922" />
     </a>
-  <a >
-       <img alt="Status-building" src="https://img.shields.io/badge/Status-building-blue" />
-  	</a>
   <a href=""><img src="https://img.shields.io/badge/python-3.6.2+-orange.svg"></a>
   <a >
        <img alt="PRs-Welcome" src="https://img.shields.io/badge/PRs-Welcome-red" />
@@ -25,13 +22,32 @@
     <br />
 </p>
 
+<div>
+<img src="./img/SCIR_logo.png" width="100%">
+</div>
+
 ## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/motivation.png" width="25" />  Motivation
 
 Spoken Language Understanding (SLU) is one of the core components of a task-oriented dialogue system, which aims to extract the semantic meaning of user queries (e.g., intents and slots).
 
 In this work, we introduce __OpenSLU__, an open-source toolkit to provide a uniﬁed, modularized, and extensible toolkit for spoken language understanding. Speciﬁcally, OpenSLU uniﬁes 10 SLU baselines for both single-intent and multi-intent scenarios, which support both non-pretrained and pretrained models simultaneously. Additionally, OpenSLU is highly modularized and extensible by decomposing the model architecture, inference, and learning process into reusable modules, which allows researchers to quickly set up SLU experiments with highly ﬂexible conﬁgurations. We hope OpenSLU can help researcher to quickly initiate experiments and spur more breakthroughs in SLU.
 
+If you find this project useful for your research, please consider citing the following paper:
+
+```
+@misc{openslu,
+      title={OpenSLU: A Unified, Modularized, and Extensible Toolkit for Spoken Language Understanding}, 
+      author={Libo Qin and Qiguang Chen and Xiao Xu and Yunlong Feng and Wanxiang Che},
+      year={2023},
+      eprint={xxx},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+```
+
 ## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/notes.png" width="25" /> Changelog
+- 2023-05-17
+    - Our work are submitted by `ACL2023 Demo`.
 - 2023-02-22
     - We build the first version and release it.
 

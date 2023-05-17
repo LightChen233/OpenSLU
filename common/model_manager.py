@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-03-07 23:49:19
+LastEditTime: 2023-05-01 01:38:44
 Description: manage all process of model training and prediction.
 
 '''
@@ -22,7 +22,7 @@ from common.logger import Logger
 from common.metric import Evaluator
 from common.saver import Saver
 from common.tokenizer import get_tokenizer, get_tokenizer_class, load_embedding
-from common.utils import InputData, instantiate
+from common.utils import InputData, instantiate, load_json
 from common.utils import OutputData
 from common.config import Config
 import dill
@@ -41,6 +41,10 @@ class ModelManager(object):
         # init config
         global_pool._init()
         self.config = config
+        self.intent_list = None
+        self.intent_dict = None
+        self.slot_list = None
+        self.slot_dict = None
         self.__set_seed(self.config.base.get("seed"))
         self.device = self.config.base.get("device")
         self.load_dir = self.config.model_manager.get("load_dir")
@@ -129,7 +133,8 @@ class ModelManager(object):
             train_dataset = self.data_factory.load_dataset(self.config.dataset, split="train")
 
             # update label and vocabulary (ONLY SUPPORT FOR "word_tokenizer")
-            self.data_factory.update_label_names(train_dataset)
+            self.data_factory.update_label_names(train_dataset,
+                                                 label_path=self.config.dataset.get("label_path"))
             self.data_factory.update_vocabulary(train_dataset)
 
             
@@ -155,19 +160,18 @@ class ModelManager(object):
                                                         label2tensor=False,
                                                         **tokenizer_config)
                 self.data_factory.update_vocabulary(dev_dataset)
-            self.intent_list = None
-            self.intent_dict = None
-            self.slot_list = None
-            self.slot_dict = None
+            
             # add intent label num and slot label num to config
             if self.config.model["decoder"].get("intent_classifier") and int(self.config.get_intent_label_num()) == 0:
                 self.intent_list = self.data_factory.intent_label_list
                 self.intent_dict = self.data_factory.intent_label_dict
                 self.config.set_intent_label_num(len(self.intent_list))
+                self.config["base"]["intent_dict"] = self.intent_dict
             if self.config.model["decoder"].get("slot_classifier") and int(self.config.get_slot_label_num()) == 0:
                 self.slot_list = self.data_factory.slot_label_list
                 self.slot_dict = self.data_factory.slot_label_dict
                 self.config.set_slot_label_num(len(self.slot_list))
+                self.config["base"]["slot_dict"] = self.slot_dict
                 
             
 
@@ -255,7 +259,7 @@ class ModelManager(object):
             for data in self.train_dataloader:
                 if step == 0:
                     self.logger.info(data.get_item(
-                        0, tokenizer=self.tokenizer, intent_map=self.intent_list, slot_map=self.slot_list))
+                        0, tokenizer=self.tokenizer, intent_map=self.intent_list, slot_map=self.slot_list, use_multi=self.config.base.get("multi_intent")))
                 output = self.model(data)
                 if self.accelerator is not None and hasattr(self.model, "module"):
                     loss, intent_loss, slot_loss = self.model.module.compute_loss(
@@ -334,12 +338,17 @@ class ModelManager(object):
 
                 inps.merge_input_data(data)
                 outputs.merge_output_data(decode_output)
+            
+            if "eval_label_path" in self.config.evaluator and self.config.evaluator.get("eval_label_path"):
+                intent_dict = {x:i for i, x in enumerate(load_json(self.config.evaluator.get("eval_label_path"))["intent"])}
+            else:
+                intent_dict = self.intent_dict
             if "metric" in self.config.evaluator:
                 res = Evaluator.compute_all_metric(
-                    inps, outputs, intent_label_map=self.intent_dict, metric_list=self.config.evaluator["metric"])
+                    inps, outputs, intent_label_map=intent_dict, metric_list=self.config.evaluator["metric"])
             else:
                 res = Evaluator.compute_all_metric(
-                    inps, outputs, intent_label_map=self.intent_dict)
+                    inps, outputs, intent_label_map=intent_dict)
             self.logger.info(f"Best {mode} metric: "+str(res))
         model.train()
         return outputs, res
@@ -347,8 +356,12 @@ class ModelManager(object):
     def load(self):
         
         if self.tokenizer is None:
-            with open(os.path.join(self.load_dir, "tokenizer.pkl"), 'rb') as f:
-                self.tokenizer = dill.load(f)
+            if os.path.exists(os.path.join(self.load_dir, "tokenizer.pkl")):
+                with open(os.path.join(self.load_dir, "tokenizer.pkl"), 'rb') as f:
+                    self.tokenizer = dill.load(f)
+            else:
+                self.tokenizer = get_tokenizer(
+                    self.config.tokenizer.get("_tokenizer_name_"))
         label = utils.load_json(os.path.join(self.load_dir, "label.json"))
         if label["intent"] is None:
             self.intent_list = None
@@ -357,6 +370,7 @@ class ModelManager(object):
             self.intent_list = label["intent"]
             self.intent_dict = {x: i for i, x in enumerate(label["intent"])}
             self.config.set_intent_label_num(len(self.intent_list))
+            self.config["base"]["intent_dict"] = self.intent_dict
         if label["slot"] is None:
             self.slot_list = None
             self.slot_dict = None
@@ -364,9 +378,17 @@ class ModelManager(object):
             self.slot_list = label["slot"]
             self.slot_dict = {x: i for i, x in enumerate(label["slot"])}
             self.config.set_slot_label_num(len(self.slot_list))
+            self.config["base"]["slot_dict"] = self.slot_dict
         self.config.set_vocab_size(self.tokenizer.vocab_size)
-        if self.accelerator is not None and self.load_dir is not None:
-            self.model = torch.load(os.path.join(self.load_dir, "model.pkl"), map_location=torch.device(self.device))
+        if (self.config.model_manager.get("load_mode") and self.config.model_manager.get("load_mode")=="load_state_dict"):
+            self.config.autoload_template()
+            self.model = instantiate(self.config.model)
+            self.model.load_state_dict(torch.load(os.path.join(self.load_dir, "pytorch_model.bin"), map_location=torch.device(self.device)), strict=False)
+            self.model.to(self.device)
+        elif self.accelerator is not None and self.load_dir is not None and (self.config.model_manager.get("load_mode") and self.config.model_manager.get("load_mode")=="load_all_state"):
+            self.config.autoload_template()
+            self.model = instantiate(self.config.model)
+            self.model.load_state_dict(torch.load(os.path.join(self.load_dir, "pytorch_model.bin"), map_location=torch.device(self.device)), strict=False)
             self.prepared = True
             self.accelerator.load_state(self.load_dir)
             self.accelerator.prepare_model(self.model)

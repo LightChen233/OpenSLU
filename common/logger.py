@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-20 09:30:56
+LastEditTime: 2023-05-17 15:22:26
 Description: log manager
 
 '''
@@ -166,6 +166,7 @@ class Logger():
             loss_name (str, optional): loss description. Defaults to 'Loss'.
             step (int, optional): step num. Defaults to 0.
         """
+        
         if self.accelerator is not None:
             self.accelerator.log({loss_name: loss}, step=step)
         elif self.logger_type == "wandb":

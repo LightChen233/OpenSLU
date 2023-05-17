@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-15 17:58:53
+LastEditTime: 2023-03-22 14:35:03
 Description: Configuration class to manage all process in OpenSLU like model construction, learning processing and so on.
 
 '''
@@ -162,9 +162,9 @@ class Config(dict):
         if "interaction" in self.__dict__["model"]["decoder"]:
 
             self.__dict__["model"]["decoder"]["interaction"]["intent_label_num"] = intent_label_num
-            if self.__dict__["model"]["decoder"]["interaction"]["_model_target_"].split(".")[
-                -1] == "StackInteraction":
-                self.__dict__["model"]["decoder"]["slot_classifier"]["input_dim"] += intent_label_num
+            # if self.__dict__["model"]["decoder"]["interaction"]["_model_target_"].split(".")[
+            #     -1] == "StackInteraction":
+            #     self.__dict__["model"]["decoder"]["slot_classifier"]["input_dim"] += intent_label_num
 
     
     def set_slot_label_num(self, slot_label_num:int)->None:

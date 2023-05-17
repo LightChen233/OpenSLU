@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-17 21:08:19
+LastEditTime: 2023-05-01 23:02:05
 Description: non-pretrained encoder model
 
 '''
@@ -50,7 +50,7 @@ class NonPretrainedEncoder(BaseEncoder):
         # Embedding Initialization
         embed_config = config["embedding"]
         self.__embedding_dim = embed_config["embedding_dim"]
-        if embed_config.get("load_embedding_name") and embed_config.get("embedding_matrix"):
+        if embed_config.get("load_embedding_name") and embed_config.get("embedding_matrix") is not None:
             self.__embedding_layer = nn.Embedding.from_pretrained(embed_config["embedding_matrix"], padding_idx=0)
         else:
             self.__embedding_layer = nn.Embedding(

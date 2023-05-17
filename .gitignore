@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .idea/
+dataset/*
 wandb/*
 save/*
 !save/.gitkeep
@@ -11,7 +12,11 @@ logs/*
 test
 # C extensions
 *.so
-
+output/*
+config/*
+!config/examples
+!config/reproduction
+!config/app.yaml
 # Distribution / packaging
 .Python
 build/
@@ -135,3 +140,12 @@ dmypy.json
 .pyre/
 .vscode/
 config/deberta_multi_2.yaml
+config/deberta_multi_3.yaml
+process_model.py
+analysis.py
+few_shot.py
+process_model_2.py
+split.py
+model/decoder/interaction/co_guiding_interaction.py
+model/decoder/interaction/gis_co_interaction.py
+common/gis_co_utils.py

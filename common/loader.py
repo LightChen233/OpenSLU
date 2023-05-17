@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-28 20:54:40
+LastEditTime: 2023-04-08 13:08:40
 Description: all class for load data.
 
 '''
@@ -25,15 +25,16 @@ class DataFactory(object):
             use_multi_intent (bool, optional): _description_. Defaults to False.
         """
         self.tokenizer = tokenizer
-        self.slot_label_list = []
-        self.intent_label_list = []
+        
         self.use_multi = use_multi_intent
         self.to_lower_case = to_lower_case
         self.slot_label_dict = None
         self.intent_label_dict = None
+        self.slot_label_list = []
+        self.intent_label_list = []
 
     def __is_supported_datasets(self, dataset_name:str)->bool:
-        return dataset_name.lower() in ["atis", "snips", "mix-atis", "mix-atis"]
+        return dataset_name.lower() in ["atis", "snips", "mix-atis", "mix-snips"]
 
     def load_dataset(self, dataset_config, split="train"):
         dataset_name = None
@@ -57,23 +58,38 @@ class DataFactory(object):
                         print("Error Input: ", row)
             return Dataset.from_dict(data_dict)
 
-    def update_label_names(self, dataset):
-        for intent_labels in dataset["intent"]:
-            if self.use_multi:
-                intent_label = intent_labels.split("#")
-            else:
-                intent_label = [intent_labels]
-            for x in intent_label:
-                if x not in self.intent_label_list:
-                    self.intent_label_list.append(x)
-        for slot_label in dataset["slot"]:
-            for x in slot_label:
-                if x not in self.slot_label_list:
-                    self.slot_label_list.append(x)
-        self.intent_label_dict = {key: index for index,
-                                  key in enumerate(self.intent_label_list)}
-        self.slot_label_dict = {key: index for index,
+    def update_label_names(self, dataset, label_path=None):
+        if label_path is not None:
+            label = json.load(open(label_path,"r", encoding="utf8"))
+            if label.get("slot"):
+                self.slot_label_dict = {x:i for i,x in enumerate(label["slot"])}
+                self.slot_label_list = label["slot"]
+            if label.get("intent"):
+                self.intent_label_dict = {x:i for i,x in enumerate(label["intent"])}
+                self.intent_label_list = label["intent"]
+            if label.get("intent") is None and label.get("slot") is None:
+                print("Error!!")
+                raise ValueError
+        else:
+            for slot_label in dataset["slot"]:
+                for x in slot_label:
+                    if x not in self.slot_label_list:
+                        self.slot_label_list.append(x)
+            self.slot_label_dict = {key: index for index,
                                 key in enumerate(self.slot_label_list)}
+            
+            for intent_labels in dataset["intent"]:
+                if self.use_multi:
+                    intent_label = intent_labels.split("#")
+                else:
+                    intent_label = [intent_labels]
+                for x in intent_label:
+                    if x not in self.intent_label_list:
+                        self.intent_label_list.append(x)
+            
+            self.intent_label_dict = {key: index for index,
+                                    key in enumerate(self.intent_label_list)}
+        
 
     def update_vocabulary(self, dataset):
         if self.tokenizer.name_or_path in ["word_tokenizer"]:

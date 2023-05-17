@@ -81,6 +81,7 @@ model:
     interaction:
       _model_target_: model.decoder.interaction.StackInteraction
       differentiable: false
+      output_dim: "{model.encoder.lstm.output_dim}+{model.encoder.attention.output_dim}"
 
     intent_classifier:
       _model_target_: model.decoder.classifier.AutoregressiveLSTMClassifier
@@ -97,6 +98,7 @@ model:
 
     slot_classifier:
       _model_target_: model.decoder.classifier.AutoregressiveLSTMClassifier
+      input_dim: "{model.decoder.interaction.output_dim}+{base.intent_label_num}"
       layer_num: 1
       bidirectional: false
       force_ratio: 0.9

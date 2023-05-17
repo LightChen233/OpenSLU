@@ -2,7 +2,7 @@
 Author: Qiguang Chen
 Date: 2023-01-11 10:39:26
 LastEditors: Qiguang Chen
-LastEditTime: 2023-02-18 17:38:30
+LastEditTime: 2023-05-02 15:03:18
 Description: pretrained encoder model
 
 '''
@@ -41,4 +41,6 @@ class PretrainedEncoder(BaseEncoder):
                 hidden.update_intent_hidden_state(output.last_hidden_state[:, -1])
             else:
                 hidden.update_intent_hidden_state(output.last_hidden_state[:, 0])
+        else:
+            hidden.update_intent_hidden_state(output.last_hidden_state)
         return hidden

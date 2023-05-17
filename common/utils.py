@@ -82,14 +82,17 @@ class InputData():
         mask[:, 0] = torch.ones_like(mask[:, 0]).to(self.slot.device)
         return mask
 
-    def get_item(self, index, tokenizer=None, intent_map=None, slot_map=None, ignore_index = -100):
+    def get_item(self, index, tokenizer=None, intent_map=None, slot_map=None, ignore_index = -100, use_multi=False):
         res = {"input_ids": self.input_ids[index]}
         if tokenizer is not None:
             res["tokens"] = [tokenizer.decode(x) for x in self.input_ids[index]]
         if intent_map is not None:
             intents = self.intent.tolist()
             if isinstance(intents[index], list):
-                res["intent"] = [intent_map[int(x)] for x in intents[index]]
+                if use_multi:
+                    res["intent"] = [intent_map[i] for i, x in enumerate(intents[index]) if x == 1.]
+                else:
+                    res["intent"] = [intent_map[int(x)] for x in intents[index]]
             else:
                 res["intent"] = intent_map[intents[index]]
         if slot_map is not None:
@@ -163,10 +166,10 @@ class OutputData():
         with open(f"{path}/outputs.jsonl", "w") as f:
             if original_dataset is not None:
                 for i, s, d in zip(self.intent_ids, self.slot_ids, original_dataset):
-                    f.write(json.dumps({"pred_intent": i, "pred_slot": s, "text": d["text"], "golden_intent":d["intent"], "golden_slot":d["slot"]}) + "\n")
+                    f.write(json.dumps({"pred_intent": i, "pred_slot": s, "text": d["text"], "golden_intent":d["intent"], "golden_slot":d["slot"]}, ensure_ascii=False) + "\n")
             else:
                 for i, s in zip(self.intent_ids, self.slot_ids):
-                    f.write(json.dumps({"pred_intent": i, "pred_slot": s}) + "\n")
+                    f.write(json.dumps({"pred_intent": i, "pred_slot": s}, ensure_ascii=False) + "\n")
 
 
 class HiddenData():
