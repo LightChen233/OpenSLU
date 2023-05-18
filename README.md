@@ -23,7 +23,8 @@
 </p>
 
 <div>
-<img src="./img/SCIR_logo.png" width="100%">
+<img src="./img/csu_logo.png" width="48%">
+<img src="./img/SCIR_logo.png" width="48%">
 </div>
 
 ## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/motivation.png" width="25" />  Motivation
