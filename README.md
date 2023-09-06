@@ -177,6 +177,20 @@ class NewDecoder(BaseDecoder):
 
 **NOTE**: We have set "logger" to global_pool, user can use `global_pool.get_value("logger")` to get logger module, and call any interface for logger anywhere.
 
+### 4. Customizing your data
+
+OpenSLU require the input file to be in the `.jsonl` format, with each line representing a `JSON` object. The format should adhere to the following structure: 
+
+```json
+{
+    "text": ["A", "model", "bilayer", "can", "be", "made", "with", "either", "synthetic", "or", "natural", "lipids", "."], 
+    "intent": "XXX", 
+    "slot": ["O", "B-X", "I-X", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"]
+}
+```
+
+After that, you will need to specify the corresponding data path at [`dataset`](config/README.md) configuration.
+
 ## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/folders.png" width="25" /> Modules
 
 ### 1. Encoder Modules
