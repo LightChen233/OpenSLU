@@ -38,13 +38,21 @@ In this work, we introduce __OpenSLU__, an open-source toolkit to provide a uniï
 If you find this project useful for your research, please consider citing the following paper:
 
 ```
-@misc{qin2023openslu,
-      title={OpenSLU: A Unified, Modularized, and Extensible Toolkit for Spoken Language Understanding}, 
-      author={Libo Qin and Qiguang Chen and Xiao Xu and Yunlong Feng and Wanxiang Che},
-      year={2023},
-      eprint={2305.10231},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+@inproceedings{qin-etal-2023-openslu,
+    title = "{O}pen{SLU}: A Unified, Modularized, and Extensible Toolkit for Spoken Language Understanding",
+    author = "Qin, Libo  and
+      Chen, Qiguang  and
+      Xu, Xiao  and
+      Feng, Yunlong  and
+      Che, Wanxiang",
+    booktitle = "Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 3: System Demonstrations)",
+    month = jul,
+    year = "2023",
+    address = "Toronto, Canada",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.acl-demo.9",
+    doi = "10.18653/v1/2023.acl-demo.9",
+    pages = "95--102",
 }
 ```
 
