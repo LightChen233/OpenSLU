@@ -18,7 +18,6 @@ model_manager:
 evaluator:
   best_key: EMA
   eval_by_epoch: true
-  # eval_step: 1800
   metric:
     - intent_acc
     - intent_f1

@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+analysis*.py
 *$py.class
 .idea/
 dataset/*
@@ -146,6 +147,4 @@ analysis.py
 few_shot.py
 process_model_2.py
 split.py
-model/decoder/interaction/co_guiding_interaction.py
-model/decoder/interaction/gis_co_interaction.py
-common/gis_co_utils.py
+dpf/*

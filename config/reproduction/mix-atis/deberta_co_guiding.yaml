@@ -1,0 +1,120 @@
+device: "Tesla V100-SXM2-16GB"
+
+base:
+  name: "OpenSLUv1"
+  multi_intent: true
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 1000
+  batch_size: 8
+  ignore_index: -100
+
+model_manager:
+  load_dir: null
+  save_dir: save/deberta-co-guiding-mix-atis
+  save_mode: save-by-eval
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  eval_step: 1
+  metric:
+    - intent_acc
+    - intent_f1
+    - slot_f1
+    - EMA
+
+accelerator:
+  use_accelerator: true
+
+dataset:
+  dataset_name: mix-atis
+
+tokenizer:
+  _tokenizer_name_: microsoft/deberta-v3-base
+  _padding_side_: right
+  add_special_tokens: false
+  max_length: 200
+
+optimizer:
+  _model_target_: torch.optim.AdamW
+  _model_partial_: true
+  lr: 5e-5
+  weight_decay: 1e-8
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: microsoft/deberta-v3-base
+    output_dim: 768
+    return_with_input: true
+    return_sentence_level_hidden: true
+
+  decoder:
+    _model_target_: model.decoder.BaseDecoder
+    interaction:
+      _model_target_: model.decoder.interaction.co_guiding_interaction.CoGuidingInteraction
+      input_dim: "{model.encoder.output_dim}"
+      hidden_dim: 256
+      output_dim: "{model.decoder.interaction.hidden_dim} * 2"
+      slot_label_num: "{base.intent_label_num}"
+      intent_label_num: "{base.intent_label_num}"
+      dropout_rate: 0.4
+      negative_slope: 0.2
+      layer_num: 1
+      gat_dropout_rate: 0.5
+      n_heads: 8
+      slot_graph_window: 2
+      threshold: 0.5
+      n_layers_decoder_global: 2
+
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.MLPClassifier
+      mode: "token-level-intent"
+      mlp:
+        - _model_target_: torch.nn.Linear
+          in_features: "{model.decoder.interaction.output_dim}"
+          out_features: 256
+        - _model_target_: torch.nn.LeakyReLU
+          negative_slope: 0.2
+        - _model_target_: torch.nn.Linear
+          in_features: 256
+          out_features: "{base.intent_label_num}"
+      loss_fn:
+        _model_target_: torch.nn.BCEWithLogitsLoss
+      dropout_rate: 0.4
+      use_multi: "{base.multi_intent}"
+      multi_threshold: 0.5
+      return_sentence_level: true
+      ignore_index: "{base.ignore_index}"
+      weight: 0.2
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.MLPClassifier
+      mode: "slot"
+      mlp:
+        - _model_target_: torch.nn.Linear
+          in_features: "{model.decoder.interaction.output_dim}"
+          out_features: "{model.decoder.interaction.output_dim}"
+        - _model_target_: torch.nn.LeakyReLU
+          negative_slope: 0.2
+        - _model_target_: torch.nn.Linear
+          in_features: "{model.decoder.interaction.output_dim}"
+          out_features: "{base.slot_label_num}"
+      ignore_index: "{base.ignore_index}"
+      dropout_rate: 0.4
+      use_multi: false
+      multi_threshold: 0.5
+      weight: 0.8
+      return_sentence_level: false

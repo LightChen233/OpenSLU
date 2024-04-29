@@ -27,6 +27,9 @@
 <img src="./img/SCIR_logo.png" width="48%">
 </div>
 
+## 🔥News
+- \[04/30\] 🔥 We support a series of new SLU algorithms, including Co-guiding, MISCA, GIS-Co, DPF.
+
 ## <img src="https://cdn.jsdelivr.net/gh/LightChen233/blog-img/motivation.png" width="25" />  Motivation
 
 Spoken Language Understanding (SLU) is one of the core components of a task-oriented dialogue system, which aims to extract the semantic meaning of user queries (e.g., intents and slots).
@@ -356,7 +359,14 @@ We implement various 10 common-used SLU baselines:
   - `agif.yaml`
 - GL-GIN \[ [Qin et al., 2021](https://arxiv.org/abs/2106.01925) \] : 
   - `gl-gin.yaml`
-
+- Co-Guiding \[ [Xing et al., 2022](https://aclanthology.org/2022.emnlp-main.12) \] : 
+  - `deberta_co_guiding.yaml`
+- GIS-Co \[ [Song et al., 2022](https://aclanthology.org/2022.emnlp-main.543) \] : 
+  - `deberta_gis_co.yaml`
+- MISCA \[ [Pham et al., 2023](https://aclanthology.org/2023.findings-emnlp.841) \] : 
+  - `deberta_misca.yaml`
+- DPF \[ [Qin et al., 2023]() \] : 
+  - Please follow pretraining process at [DPF](https://github.com/LightChen233/DPF) 
 ---
 
 <table style="text-align:center;">
@@ -376,7 +386,7 @@ We implement various 10 common-used SLU baselines:
       <th> EMA(%) </th>
 	</tr >
   <tr>
-	    <td colspan="8"> Non-Pretrained Models
+	    <td colspan="9"> Non-Pretrained Models
 	</td >
   <tr >
         <td style="text-align:left;">Vanilla Multi Task Framework</td>
@@ -411,6 +421,21 @@ We implement various 10 common-used SLU baselines:
       <td><b>96.1</b></td>
       <td><b>74.9</b></td>
 	</tr>
+  <!-- <tr >
+	    <td colspan="9"> Pretrained Models
+	</td >
+  <tr >
+  <tr >
+        <td style="text-align:left;">Deberta-v3 [<a href="https://openreview.net/forum?id=sE7-XhLxHA">He et al., 2023</a>]</td>
+	    <td>86.3</td>
+      <td><b>81.1</b></td>
+      <td><b>77.1</b></td>
+      <td><b>43.6</b></td>
+      <td>94.2</td>
+      <td><b>98.5</b></td>
+      <td><b>96.1</b></td>
+      <td><b>74.9</b></td>
+	</tr> -->
 </table>
 
 ---

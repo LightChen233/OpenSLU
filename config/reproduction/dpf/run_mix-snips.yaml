@@ -1,0 +1,91 @@
+base:
+  name: "OpenSLUv2"
+  multi_intent: true
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 100
+  batch_size: 16
+  ignore_index: -100
+
+model_manager:
+  load_dir: save/dpf/tsap/ckpt-45000
+  load_mode: load_state_dict
+  save_dir: save/dpf/mix-snips
+  save_mode: save-by-eval
+  # save_step: 150
+  max_save_num: 20
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  eval_label_path: config/reproduction/dpf/label_map/mix_snips_label.json
+  metric:
+    - intent_acc
+    - slot_f1
+    - EMA
+
+accelerator:
+  use_accelerator: true
+
+dataset:
+  label_path: config/reproduction/dpf/label_map/label.json
+  train: mix-snips
+  validation: mix-snips
+  test: mix-snips
+
+tokenizer:
+  _tokenizer_name_: microsoft/deberta-v3-base
+  _padding_side_: right
+  _to_lower_case_: true
+  add_special_tokens: true
+  max_length: 200
+
+optimizer:
+  _model_target_: torch.optim.AdamW
+  _model_partial_: true
+  lr: 3e-6
+  weight_decay: 1e-8
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: microsoft/deberta-v3-base
+    output_dim: 768
+    return_with_input: true
+    return_sentence_level_hidden: true
+
+  decoder:
+    _model_target_: model.decoder.DCANetDecoder
+    interaction:
+      _model_target_: model.decoder.interaction.DCANetInteraction
+      output_dim: "{model.encoder.output_dim}"
+      attention_dropout: 0.4
+      num_attention_heads: 8
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "intent"
+      loss_fn:
+        _model_target_: torch.nn.BCEWithLogitsLoss
+      input_dim: "{model.encoder.output_dim}"
+      use_multi: true
+      multi_threshold: 0.5
+      ignore_index: -100
+      weight: 3
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "slot"
+      input_dim: "{model.encoder.output_dim}"
+      ignore_index: -100
+      weight: 1

@@ -1,0 +1,97 @@
+base:
+  name: "OpenSLUv2"
+  multi_intent: true
+  train: true
+  test: true
+  device: cuda
+  seed: 42
+  epoch_num: 50
+  batch_size: 8
+  ignore_index: -100
+
+model_manager:
+  load_dir: null
+  save_dir: save/deberta-misca-mix-atis
+  save_mode: save-by-eval
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: true
+  eval_step: 1
+  metric:
+    - intent_acc
+    - intent_f1
+    - slot_f1
+    - EMA
+
+accelerator:
+  use_accelerator: true
+
+dataset:
+  train: mix-atis
+
+tokenizer:
+  _tokenizer_name_: microsoft/deberta-v3-base
+  _padding_side_: right
+  add_special_tokens: false
+  max_length: 200
+
+optimizer:
+  _model_target_: torch.optim.AdamW
+  _model_partial_: true
+  lr: 1e-4
+  weight_decay: 1e-8
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: microsoft/deberta-v3-base
+    output_dim: 768
+    return_with_input: true
+    return_sentence_level_hidden: false
+
+  decoder:
+    _model_target_: model.decoder.misca_decoder.MISCADecoder
+    interaction:
+      _model_target_: model.decoder.interaction.misca_interaction.MISCAInteraction
+      input_dim: "{model.encoder.output_dim}"
+      level_projection_size: 32
+      attention_mode: "label"
+      hidden_dim: 256
+      intent_slot_attn_size: 256
+      slot_hidden_dim: 128
+      slot_dict: "{base.slot_dict}"
+      task: mix-atis
+      label_embedding_size: 256
+      embedding_type: "soft"
+      output_dim: "{model.decoder.interaction.hidden_dim}"
+      slot_label_num: "{base.intent_label_num}"
+      intent_label_num: "{base.intent_label_num}"
+      dropout_rate: 0.2
+
+    intent_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "intent"
+      input_dim: "{model.decoder.interaction.output_dim}"
+      loss_fn:
+        _model_target_: torch.nn.BCEWithLogitsLoss
+      use_multi: "{base.multi_intent}"
+      multi_threshold: 0.5
+      return_sentence_level: true
+      ignore_index: "{base.ignore_index}"
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "slot"
+      input_dim: "{model.decoder.interaction.output_dim}"
+      use_multi: false
+      ignore_index: "{base.ignore_index}"
+      return_sentence_level: false

@@ -1,0 +1,85 @@
+base:
+  name: "OpenSLUv2"
+  multi_intent: true
+  train: true
+  test: false
+  device: cuda
+  seed: 42
+  epoch_num: 5
+  batch_size: 16
+  ignore_index: -100
+
+model_manager:
+  load_dir: null
+  save_dir: save/dpf/taap
+  save_mode: save-by-eval
+  save_step: 5000
+  max_save_num: 40
+
+evaluator:
+  best_key: EMA
+  eval_by_epoch: false
+  eval_step: 5000
+  metric:
+    - intent_acc
+    - slot_f1
+    - EMA
+
+accelerator:
+  use_accelerator: true
+
+dataset:
+  train: ./dataset/taap/train.jsonl
+  validation: ./dataset/taap/dev.jsonl
+
+tokenizer:
+  _tokenizer_name_: microsoft/deberta-v3-base
+  _padding_side_: right
+  _to_lower_case_: true
+  add_special_tokens: true
+  max_length: 200
+
+optimizer:
+  _model_target_: torch.optim.AdamW
+  _model_partial_: true
+  lr: 5e-5
+  weight_decay: 1e-8
+
+scheduler:
+  _model_target_: transformers.get_scheduler
+  _model_partial_: true
+  name : "linear"
+  num_warmup_steps: 0
+
+model:
+  _model_target_: model.OpenSLUModel
+
+  encoder:
+    _model_target_: model.encoder.AutoEncoder
+    encoder_name: microsoft/deberta-v3-base
+    output_dim: 768
+    return_with_input: true
+    return_sentence_level_hidden: true
+
+  decoder:
+    _model_target_: model.decoder.base_decoder.BaseDecoder
+    intent_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "intent"
+      loss_fn:
+        _model_target_: torch.nn.BCEWithLogitsLoss
+      use_multi: "{base.multi_intent}"
+      multi_threshold: 0.5
+      return_sentence_level: true
+      ignore_index: "{base.ignore_index}"
+      weight: 0.9
+
+
+    slot_classifier:
+      _model_target_: model.decoder.classifier.LinearClassifier
+      mode: "slot"
+      ignore_index: "{base.ignore_index}"
+      use_multi: false
+      multi_threshold: 0.5
+      return_sentence_level: false
+      weight: 0.1

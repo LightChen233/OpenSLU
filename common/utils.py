@@ -5,7 +5,7 @@ import os
 import tarfile
 from typing import List, Tuple
 import zipfile
-from collections import Callable
+from typing import Callable
 from ruamel import yaml
 import requests
 import torch
